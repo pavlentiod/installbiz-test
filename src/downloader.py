@@ -36,6 +36,7 @@ from .config import (
     MAX_ARCHIVE_BYTES,
     MAX_FILE_BYTES,
     MAX_TRANSIENT_RETRIES,
+    REQUEST_INTERVAL_SECONDS,
     REQUEST_TIMEOUT_SECONDS,
     UPSTREAM_BASE_URL,
     logger,
@@ -53,6 +54,23 @@ from .database import (
 
 class UpstreamError(RuntimeError):
     pass
+
+
+request_interval_lock = asyncio.Lock()
+last_request_started_at: float | None = None
+
+
+async def wait_for_request_interval() -> None:
+    """Serialize upstream calls and keep their start times sufficiently far apart."""
+    global last_request_started_at
+    async with request_interval_lock:
+        if last_request_started_at is not None:
+            elapsed = time.monotonic() - last_request_started_at
+            delay = REQUEST_INTERVAL_SECONDS - elapsed
+            if delay > 0:
+                logger.debug("Waiting %.2f seconds before the next upstream request", delay)
+                await asyncio.sleep(delay)
+        last_request_started_at = time.monotonic()
 
 
 def chunks(items: Sequence[str], size: int = BATCH_SIZE) -> Iterator[list[str]]:
@@ -95,6 +113,7 @@ async def request_with_retry(
     transient_attempt = 0
     while True:
         try:
+            await wait_for_request_interval()
             response = await request_factory()
         except (httpx.TimeoutException, httpx.NetworkError) as exc:
             transient_attempt += 1

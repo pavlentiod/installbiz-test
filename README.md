@@ -58,6 +58,10 @@ CANDIDATE_ID=stable-unique-candidate-id
 TRAEFIK_HOST=files.example.com
 ```
 
+`REQUEST_INTERVAL_SECONDS` задаёт минимальный интервал между запросами к API
+разработчиков (по умолчанию 3 секунды). Ответы `429` и `403` дополнительно ожидают время
+из заголовка `Retry-After`.
+
 Traefik должен быть подключён к существующей внешней Docker-сети `web`. Затем выполните:
 
 ```bash

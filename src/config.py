@@ -69,7 +69,20 @@ def positive_float_env(name: str, default: float) -> float:
     return value
 
 
+def non_negative_float_env(name: str, default: float) -> float:
+    """Read a finite non-negative floating-point setting."""
+    raw_value = os.getenv(name, str(default))
+    try:
+        value = float(raw_value)
+    except ValueError as exc:
+        raise RuntimeError(f"{name} must be a number, got {raw_value!r}") from exc
+    if not math.isfinite(value) or value < 0:
+        raise RuntimeError(f"{name} must be a finite non-negative number, got {raw_value!r}")
+    return value
+
+
 REQUEST_TIMEOUT_SECONDS = positive_float_env("REQUEST_TIMEOUT_SECONDS", 30)
+REQUEST_INTERVAL_SECONDS = non_negative_float_env("REQUEST_INTERVAL_SECONDS", 3)
 DEFAULT_RETRY_SECONDS = positive_int_env("DEFAULT_RETRY_SECONDS", 10)
 MAX_TRANSIENT_RETRIES = positive_int_env("MAX_TRANSIENT_RETRIES", 5)
 
