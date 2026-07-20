@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.venv/
+.uv-cache/
+.env
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+data/
+*.db
+mock_api.py

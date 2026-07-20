@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Результат расчёта</title>
+  <style>
+    :root { font-family: Inter, system-ui, sans-serif; color: #172033; background: #f4f6fb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    nav { background: #172033; padding: 16px max(24px, calc((100% - 1180px) / 2)); }
+    nav a { color: white; text-decoration: none; margin-right: 24px; }
+    main { max-width: 1180px; margin: 42px auto; padding: 0 24px; }
+    .panel { background: white; border-radius: 12px; padding: 22px; margin: 22px 0; box-shadow: 0 8px 28px #27375d14; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; white-space: nowrap; }
+    th, td { padding: 11px 13px; border-bottom: 1px solid #e7eaf1; text-align: right; }
+    th:first-child, td:first-child { text-align: left; }
+    .muted { color: #697386; }
+  </style>
+</head>
+<body>
+  <nav><a href="/">Скачивание</a><a href="/files">Файлы и расчёты</a><a href="/docs">API</a></nav>
+  <main>
+    <h1>Результат расчёта</h1>
+    <p class="muted">Файлов: {{ calculation.file_count }} · Расчёт: {{ calculation.created_at | nsk }}</p>
+    <section class="panel">
+      <h2>Общая статистика</h2>
+      <table><thead><tr><th>Цифра</th>{% for digit in '0123456789' %}<th>{{ digit }}</th>{% endfor %}</tr></thead>
+        <tbody><tr><td>Количество</td>{% for digit in '0123456789' %}<td>{{ calculation.total_counts[digit] }}</td>{% endfor %}</tr></tbody>
+      </table>
+    </section>
+    <section class="panel">
+      <h2>Статистика по файлам</h2>
+      <table>
+        <thead><tr><th>Файл</th>{% for digit in '0123456789' %}<th>{{ digit }}</th>{% endfor %}</tr></thead>
+        <tbody>
+          {% for file in calculation.file_counts %}
+            <tr><td>{{ file.name }}</td>{% for digit in '0123456789' %}<td>{{ file.counts[digit] }}</td>{% endfor %}</tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>
+

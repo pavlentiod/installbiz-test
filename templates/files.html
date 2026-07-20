@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Скачанные файлы</title>
+  <style>
+    :root { font-family: Inter, system-ui, sans-serif; color: #172033; background: #f4f6fb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    nav { background: #172033; padding: 16px max(24px, calc((100% - 1100px) / 2)); }
+    nav a { color: white; text-decoration: none; margin-right: 24px; }
+    main { max-width: 1100px; margin: 42px auto; padding: 0 24px; }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 20px 0; }
+    button, .link-button { border: 0; border-radius: 8px; padding: 10px 14px; background: #3157d5; color: white; font-weight: 700; cursor: pointer; text-decoration: none; }
+    button.secondary, .link-button.secondary { background: #e7ebf6; color: #26334f; }
+    table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 8px 28px #27375d14; }
+    th, td { padding: 14px 16px; border-bottom: 1px solid #e7eaf1; text-align: left; }
+    th { color: #5d6678; font-size: 13px; }
+    .pages { display: flex; gap: 8px; align-items: center; margin-top: 20px; }
+    .pages a { color: #3157d5; }
+    .muted { color: #697386; }
+    .error { color: #a12828; }
+  </style>
+</head>
+<body>
+  <nav><a href="/">Скачивание</a><a href="/files">Файлы и расчёты</a><a href="/docs">API</a></nav>
+  <main>
+    <h1>Скачанные файлы</h1>
+    <p class="muted">Всего скачано: {{ total }}. Точечный выбор сохраняется при переходе между страницами.</p>
+    <div class="toolbar">
+      <button type="button" id="page-all" class="secondary">Выбрать все на странице</button>
+      <button type="button" id="clear" class="secondary">Снять выбор</button>
+      <button type="button" id="calculate-selected">Произвести расчёты для выбранных</button>
+      <button type="button" id="calculate-all">Произвести расчёты для всех</button>
+      <span id="selected-count" class="muted"></span>
+    </div>
+    <p id="error" class="error"></p>
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>Имя файла</th>
+          <th>
+            Время скачивания
+            {% if order == 'desc' %}
+              <a href="/files?page={{ page }}&page_size={{ page_size }}&order=asc">↑</a>
+            {% else %}
+              <a href="/files?page={{ page }}&page_size={{ page_size }}&order=desc">↓</a>
+            {% endif %}
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for file in files %}
+          <tr>
+            <td><input class="file-checkbox" type="checkbox" value="{{ file.id }}" aria-label="Выбрать {{ file.name }}"></td>
+            <td>{{ file.name }}</td>
+            <td>{{ file.downloaded_at | nsk }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="3">Файлы ещё не скачаны.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="pages">
+      {% if page > 1 %}<a href="/files?page={{ page - 1 }}&page_size={{ page_size }}&order={{ order }}">← Назад</a>{% endif %}
+      <span>Страница {{ page }} из {{ pages }}</span>
+      {% if page < pages %}<a href="/files?page={{ page + 1 }}&page_size={{ page_size }}&order={{ order }}">Вперёд →</a>{% endif %}
+    </div>
+  </main>
+  <script>
+    const storageKey = 'selected-file-ids';
+    let selected = new Set(JSON.parse(localStorage.getItem(storageKey) || '[]').map(Number));
+    const boxes = [...document.querySelectorAll('.file-checkbox')];
+    const count = document.querySelector('#selected-count');
+    function persist() {
+      localStorage.setItem(storageKey, JSON.stringify([...selected]));
+      count.textContent = `Выбрано точечно: ${selected.size}`;
+      boxes.forEach(box => box.checked = selected.has(Number(box.value)));
+    }
+    boxes.forEach(box => box.addEventListener('change', () => {
+      const id = Number(box.value);
+      box.checked ? selected.add(id) : selected.delete(id);
+      persist();
+    }));
+    document.querySelector('#page-all').addEventListener('click', () => {
+      boxes.forEach(box => selected.add(Number(box.value)));
+      persist();
+    });
+    document.querySelector('#clear').addEventListener('click', () => {
+      selected.clear();
+      persist();
+    });
+    async function calculate(mode) {
+      const error = document.querySelector('#error');
+      error.textContent = '';
+      const response = await fetch('/api/calculations', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({mode, file_ids: mode === 'selected' ? [...selected] : []})
+      });
+      const body = await response.json();
+      if (!response.ok) {
+        error.textContent = body.detail || 'Не удалось выполнить расчёт';
+        return;
+      }
+      window.location.assign(body.url);
+    }
+    document.querySelector('#calculate-selected').addEventListener('click', () => calculate('selected'));
+    document.querySelector('#calculate-all').addEventListener('click', () => calculate('all'));
+    persist();
+  </script>
+</body>
+</html>
+

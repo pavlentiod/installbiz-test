@@ -1,0 +1,5 @@
+project_name_override: developer-api-client
+package_name_override: developer_api_client
+literal_enums: true
+use_path_prefixes_for_title_model_names: false
+

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Скачивание данных</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, system-ui, sans-serif; color: #172033; background: #f4f6fb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    nav { background: #172033; padding: 16px max(24px, calc((100% - 980px) / 2)); }
+    nav a { color: white; text-decoration: none; margin-right: 24px; }
+    main { max-width: 980px; margin: 48px auto; padding: 0 24px; }
+    h1 { margin-bottom: 8px; }
+    .lead { color: #5d6678; margin-bottom: 28px; }
+    .panel { background: white; border-radius: 14px; padding: 28px; box-shadow: 0 8px 28px #27375d14; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin: 22px 0; }
+    .metric { background: #f7f8fc; border-radius: 10px; padding: 16px; }
+    .metric small { display: block; color: #697386; margin-bottom: 8px; }
+    .metric strong { font-size: 18px; }
+    button { border: 0; border-radius: 9px; padding: 12px 18px; background: #3157d5; color: white; font-weight: 700; cursor: pointer; }
+    button:disabled { cursor: wait; opacity: .6; }
+    .error { color: #a12828; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <nav><a href="/">Скачивание</a><a href="/files">Файлы и расчёты</a><a href="/docs">API</a></nav>
+  <main>
+    <h1>Скачивание каталога</h1>
+    <p class="lead">Каталог загружается последовательно небольшими порциями с соблюдением ограничений API.</p>
+    <section class="panel">
+      <button id="start">Скачать данные</button>
+      <div class="grid">
+        <div class="metric"><small>Статус</small><strong id="status">{{ state.status }}</strong></div>
+        <div class="metric"><small>Старт процесса</small><strong id="started">{{ state.started_at_nsk }}</strong></div>
+        <div class="metric"><small>Получено названий</small><strong id="discovered">{{ state.discovered_count }}</strong></div>
+        <div class="metric"><small>Скачано файлов</small><strong id="downloaded">{{ state.downloaded_count }}</strong></div>
+      </div>
+      <p id="retry"></p>
+      <p id="error" class="error">{{ state.error or '' }}</p>
+    </section>
+  </main>
+  <script>
+    const labels = {
+      idle: 'Не запускалось', queued: 'В очереди', running: 'Скачивание',
+      waiting_retry: 'Ожидание Retry-After', completed: 'Завершено', failed: 'Ошибка'
+    };
+    const button = document.querySelector('#start');
+    function render(state) {
+      document.querySelector('#status').textContent = labels[state.status] || state.status;
+      document.querySelector('#started').textContent = state.started_at_nsk || '—';
+      document.querySelector('#discovered').textContent = state.discovered_count;
+      document.querySelector('#downloaded').textContent = state.downloaded_count;
+      document.querySelector('#retry').textContent = state.next_retry_at
+        ? `Следующая попытка: ${state.next_retry_at_nsk}` : '';
+      document.querySelector('#error').textContent = state.error || '';
+      button.disabled = ['queued', 'running', 'waiting_retry'].includes(state.status);
+    }
+    async function status() {
+      try {
+        const response = await fetch('/api/download/status');
+        if (response.ok) render(await response.json());
+      } finally {
+        window.setTimeout(status, 1500);
+      }
+    }
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      const response = await fetch('/api/download/start', {method: 'POST'});
+      if (!response.ok) {
+        document.querySelector('#error').textContent = 'Не удалось запустить скачивание';
+        button.disabled = false;
+        return;
+      }
+      render(await response.json());
+    });
+    render({{ state | tojson }});
+    status();
+  </script>
+</body>
+</html>
+
