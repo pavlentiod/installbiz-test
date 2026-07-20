@@ -1,0 +1,30 @@
+services:
+  app:
+    build: .
+    container_name: installbiz
+    restart: unless-stopped
+    environment:
+      UPSTREAM_BASE_URL: ${UPSTREAM_BASE_URL:?Set UPSTREAM_BASE_URL}
+      CANDIDATE_ID: ${CANDIDATE_ID:?Set CANDIDATE_ID}
+      DATABASE_PATH: /data/app.db
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      REQUEST_TIMEOUT_SECONDS: ${REQUEST_TIMEOUT_SECONDS:-30}
+      DEFAULT_RETRY_SECONDS: ${DEFAULT_RETRY_SECONDS:-10}
+      MAX_TRANSIENT_RETRIES: ${MAX_TRANSIENT_RETRIES:-5}
+    volumes:
+      - app-data:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.installbiz.rule=Host(`pavlentiod-test-app.ru`)"
+      - "traefik.http.routers.installbiz.entrypoints=websecure"
+      - "traefik.http.routers.installbiz.tls.certresolver=letsencrypt"
+      - "traefik.http.services.installbiz.loadbalancer.server.port=8000"
+    networks:
+      - web
+
+volumes:
+  app-data:
+
+networks:
+  web:
+    external: true
